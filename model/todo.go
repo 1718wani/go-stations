@@ -21,10 +21,14 @@ type (
 		TODO TODO `json:"todo"`
 	}
 
-	// A ReadTODORequest expresses ...
-	ReadTODORequest struct{}
-	// A ReadTODOResponse expresses ...
-	ReadTODOResponse struct{}
+	 ReadTODORequest struct {
+		PrevID int `json:"prev_id"`
+		Size   int `json:"size"`
+	}
+	
+	 ReadTODOResponse struct {
+		TODOs []TODO `json:"todos"`
+	}
 
 	// A UpdateTODORequest expresses ...
 	UpdateTODORequest struct{
@@ -38,7 +42,9 @@ type (
 	}
 
 	// A DeleteTODORequest expresses ...
-	DeleteTODORequest struct{}
+	 DeleteTODORequest struct {
+		IDs []int `json:"ids"`
+	}
 	// A DeleteTODOResponse expresses ...
 	DeleteTODOResponse struct{}
 )
