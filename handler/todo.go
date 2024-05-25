@@ -27,6 +27,8 @@ func (h *TODOHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodPost:
 		h.handleCreate(w, r)
+	case http.MethodPut:
+		h.handleUpdate(w, r)
 	default:
 		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
 	}
@@ -52,6 +54,31 @@ func (h *TODOHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	res := model.CreateTODOResponse{TODO: *todo}
+	if err := json.NewEncoder(w).Encode(res); err != nil {
+		log.Println(err)
+	}
+}
+
+// handleUpdate handles the endpoint that updates the TODO.
+func (h *TODOHandler) handleUpdate(w http.ResponseWriter, r *http.Request) {
+	var req model.UpdateTODORequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if req.Subject == "" {
+		http.Error(w, "Subject is required", http.StatusBadRequest)
+		return
+	}
+
+	todo, err := h.svc.UpdateTODO(r.Context(), req.ID, req.Subject, req.Description)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	res := model.UpdateTODOResponse{TODO: *todo}
 	if err := json.NewEncoder(w).Encode(res); err != nil {
 		log.Println(err)
 	}

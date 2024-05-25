@@ -33,7 +33,6 @@ func (s *TODOService) CreateTODO(ctx context.Context, subject, description strin
 	}
 	defer tx.Rollback()
 
-	// TODOを挿入
 	result, err := tx.ExecContext(ctx, insert, subject, description)
 	if err != nil {
 		return nil, err
@@ -74,10 +73,43 @@ func (s *TODOService) ReadTODO(ctx context.Context, prevID, size int64) ([]*mode
 func (s *TODOService) UpdateTODO(ctx context.Context, id int64, subject, description string) (*model.TODO, error) {
 	const (
 		update  = `UPDATE todos SET subject = ?, description = ? WHERE id = ?`
-		confirm = `SELECT subject, description, created_at, updated_at FROM todos WHERE id = ?`
+		confirm = `SELECT id, subject, description, created_at, updated_at FROM todos WHERE id = ?`
 	)
 
-	return nil, nil
+	// トランザクションを開始
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer tx.Rollback()
+	
+	result, err := tx.ExecContext(ctx, update, subject, description, id)
+	if err != nil {
+		return nil, err
+	}
+
+	// 変更された行数を取得
+	rowsAffected, err := result.RowsAffected()
+	if err != nil {
+		return nil, err
+	}
+	if rowsAffected == 0 {
+		return nil, &model.ErrNotFound{ID: id}
+	}
+
+	// 更新されたTODOを取得
+	row := tx.QueryRowContext(ctx, confirm, id)
+	var todo model.TODO
+	if err := row.Scan(&todo.ID, &todo.Subject, &todo.Description, &todo.CreatedAt, &todo.UpdatedAt); err != nil {
+		return nil, err
+	}
+
+	// トランザクションをコミット
+	if err := tx.Commit(); err != nil {
+		return nil, err
+	}
+
+	return &todo, nil
 }
 
 // DeleteTODO deletes TODOs on DB by ids.
