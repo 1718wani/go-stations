@@ -2,6 +2,9 @@ package handler
 
 import (
 	"context"
+	"encoding/json"
+	"log"
+	"net/http"
 
 	"github.com/TechBowl-japan/go-stations/model"
 	"github.com/TechBowl-japan/go-stations/service"
@@ -16,6 +19,41 @@ type TODOHandler struct {
 func NewTODOHandler(svc *service.TODOService) *TODOHandler {
 	return &TODOHandler{
 		svc: svc,
+	}
+}
+
+// ServeHTTP handles the HTTP requests for TODOHandler.
+func (h *TODOHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	switch r.Method {
+	case http.MethodPost:
+		h.handleCreate(w, r)
+	default:
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+	}
+}
+
+// handleCreate handles the endpoint that creates the TODO.
+func (h *TODOHandler) handleCreate(w http.ResponseWriter, r *http.Request) {
+	var req model.CreateTODORequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	if req.Subject == "" {
+		http.Error(w, "Subject is required", http.StatusBadRequest)
+		return
+	}
+
+	todo, err := h.svc.CreateTODO(r.Context(), req.Subject, req.Description)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	res := model.CreateTODOResponse{TODO: *todo}
+	if err := json.NewEncoder(w).Encode(res); err != nil {
+		log.Println(err)
 	}
 }
 
